@@ -36,7 +36,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     uint256 private _totalSupply;
-
+    address private _NFTRegistery; //getters and setters
     string private _name;
     string private _symbol;
 
@@ -61,6 +61,15 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         return _name;
     }
 
+    /**
+     * @dev Returns the NFTRegistery of the token.
+     */
+    function getNFTRegistery() public view returns (address) {
+        return _NFTRegistery;
+    }
+    function setNFTRegistery(address NFTRegistery) public {
+        _NFTRegistery = NFTRegistery;
+    }
     /**
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
@@ -113,6 +122,16 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         return true;
     }
 
+    function spend(address from, uint256 amount) public returns (bool) {
+        require(amount < _totalSupply);
+        require(_balances[from] > amount);
+        require(msg.sender == _NFTRegistery);
+
+        _balances[from] = _balances[from] - amount;
+        _balances[msg.sender] = _balances[msg.sender] + amount;
+        emit Transfer(from, msg.sender, amount);
+        return true;
+    }
     /**
      * @dev See {IERC20-allowance}.
      */
@@ -154,9 +173,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
         uint256 currentAllowance = _allowances[sender][_msgSender()];
         require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
-        unchecked {
-            _approve(sender, _msgSender(), currentAllowance - amount);
-        }
+    unchecked {
+        _approve(sender, _msgSender(), currentAllowance - amount);
+    }
 
         return true;
     }
@@ -195,9 +214,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         uint256 currentAllowance = _allowances[_msgSender()][spender];
         require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
-        unchecked {
-            _approve(_msgSender(), spender, currentAllowance - subtractedValue);
-        }
+    unchecked {
+        _approve(_msgSender(), spender, currentAllowance - subtractedValue);
+    }
 
         return true;
     }
@@ -228,9 +247,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
         uint256 senderBalance = _balances[sender];
         require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        unchecked {
-            _balances[sender] = senderBalance - amount;
-        }
+    unchecked {
+        _balances[sender] = senderBalance - amount;
+    }
         _balances[recipient] += amount;
 
         emit Transfer(sender, recipient, amount);
@@ -277,9 +296,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
         uint256 accountBalance = _balances[account];
         require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        unchecked {
-            _balances[account] = accountBalance - amount;
-        }
+    unchecked {
+        _balances[account] = accountBalance - amount;
+    }
         _totalSupply -= amount;
 
         emit Transfer(account, address(0), amount);
