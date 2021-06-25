@@ -9,15 +9,20 @@ import "../../utils/Address.sol";
 import "../../utils/Context.sol";
 import "../../utils/Strings.sol";
 import "../../utils/introspection/ERC165.sol";
+import "../ERC20/ERC20.sol";
 
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
+
 contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     using Address for address;
     using Strings for uint256;
+
+    //ERC20 Token
+    ERC20 private _token; // getters and setters
 
     // Token name
     string private _name;
@@ -25,9 +30,12 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     // Token symbol
     string private _symbol;
 
+
+    uint8 public _creatorComission = 10;
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
 
+    mapping(uint256 => address) internal _creator;
     // Mapping owner address to token count
     mapping(address => uint256) private _balances;
 
@@ -50,9 +58,20 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IERC721Metadata).interfaceId ||
-            super.supportsInterface(interfaceId);
+        interfaceId == type(IERC721).interfaceId ||
+        interfaceId == type(IERC721Metadata).interfaceId ||
+        super.supportsInterface(interfaceId);
+    }
+    /**
+     * Getter and Setter of _token (ERC20)
+     **/
+    function getToken() public view returns(ERC20){
+        return _token;
+    }
+
+    //  ERC20 private _token; // getters and setters
+    function setToken(address tokenAddress) public {
+        _token = ERC20(tokenAddress);
     }
 
     /**
@@ -247,8 +266,8 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
      *
      * Emits a {Transfer} event.
      */
-    function _safeMint(address to, uint256 tokenId) internal virtual {
-        _safeMint(to, tokenId, "");
+    function _safeMint(address to, uint256 tokenId, uint256 tokenAmount) internal virtual {
+        _safeMint(to, tokenId, tokenAmount, "");
     }
 
     /**
@@ -258,9 +277,10 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     function _safeMint(
         address to,
         uint256 tokenId,
+        uint256 tokenAmount,
         bytes memory _data
     ) internal virtual {
-        _mint(to, tokenId);
+        _mint(to, tokenId, tokenAmount);
         require(
             _checkOnERC721Received(address(0), to, tokenId, _data),
             "ERC721: transfer to non ERC721Receiver implementer"
@@ -279,15 +299,16 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
      *
      * Emits a {Transfer} event.
      */
-    function _mint(address to, uint256 tokenId) internal virtual {
+    function _mint(address to, uint256 tokenId, uint256 tokenAmount) public virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
+        require(tokenAmount > 0);
 
-        _beforeTokenTransfer(address(0), to, tokenId);
+        require(_token.spend(to, tokenAmount));
 
         _balances[to] += 1;
         _owners[tokenId] = to;
-
+        _creator[tokenId] = to;
         emit Transfer(address(0), to, tokenId);
     }
 
@@ -303,8 +324,6 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
      */
     function _burn(uint256 tokenId) internal virtual {
         address owner = ERC721.ownerOf(tokenId);
-
-        _beforeTokenTransfer(owner, address(0), tokenId);
 
         // Clear approvals
         _approve(address(0), tokenId);
